@@ -44,3 +44,10 @@ class Datebase(DatabaseConfiguration):
 
         return await self.create_token(str(query["_id"]))
 
+    @start_db()
+    async def check_token(self, token:str):
+        query = await base_db.client.token_collection.find_one({"token": token})
+        query["_id"] = str(query["_id"])
+        if query:
+            return True
+        return False

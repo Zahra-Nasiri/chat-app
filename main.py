@@ -1,9 +1,11 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from user_app.router import router as user_router
-
+from user_app.db import Datebase
 
 app = FastAPI()
+db_client = Datebase()
+
 
 app.include_router(user_router)
 
@@ -51,11 +53,16 @@ async def get_active_users():
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(websocket: WebSocket, client_id:str):
     await manager.connect(websocket, client_id)
+    is_token = None
     try:
         while True:
-            data = await websocket.receive_text()
-            await manager.send_personal_message(message=f"you wrote {data}", client_ids=manager.client_ids, websocket=websocket)
-            await manager.broadcast(message=f"client ID #{clientd_id} says: {data}", client_ids=manager.client_ids)
+            if is_token:
+                data = await websocket.receive_text()
+                await manager.send_personal_message(message=f"you wrote {data}", client_ids=manager.client_ids, websocket=websocket)
+                await manager.broadcast(message=f"client ID #{clientd_id} says: {data}", client_ids=manager.client_ids)
+            else:
+                data = await websocket.receive_text()
+                is_token = await db_client.check_token(data)
 
     except WebSocketDisconnect:
         await manager.disconnect(websocket=websocket, client_id=client_id)
